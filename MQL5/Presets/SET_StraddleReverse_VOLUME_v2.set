@@ -1,0 +1,68 @@
+; ==================================================================
+; XAU StraddleReverse v4.40 — แบบเน้นกำไร (ไม้เยอะกว่า เสี่ยงกว่า)
+; ผ่าน 4/4 ช่อง  PF แย่สุด 1.169  กำไรกรณีร้าย +121.72  ~340 ไม้/5 วัน
+; เทรดครบ 3 ช่วง: 07:00-08:30, 19:00-20:30, 02:00-03:30 (เวลาไทย)
+;
+; ต่างจากแบบเน้นคุณภาพ 3 จุด:
+;   InpStraddleDist    0.50 -> 0.60  (คร่อมกว้างขึ้น ชดเชยช่วงที่อ่อนกว่า)
+;   InpReverseStartPts 0.40 -> 0.50
+;   InpS2_On          false -> true  (เปิดช่วง 19:00-20:30 กลับมา)
+;
+; แลกอะไร: กำไรกรณีร้ายมากกว่า 24%  แต่ PF ตกจาก 1.454 เหลือ 1.169
+; !! แก้ไขสำคัญ 17/08/2569 !!
+;   InpLotMode  0 -> 1
+;   ค่า 0 = คำนวณล็อตอัตโนมัติจาก % ความเสี่ยง (ผิด! ทำให้ได้ล็อต 0.12 แทน 0.01)
+;   ค่า 1 = ใช้ล็อตคงที่ 0.01 ตามที่ทดสอบไว้จริง
+; ==================================================================
+InpDistUnit=0
+InpMagic=990025
+InpSlippage=30
+InpVerboseLog=false
+InpStraddleDist=0.60
+InpStopLoss=2.20
+InpTakeProfit=0.0
+InpUseBreakeven=false
+InpBEStart=0.80
+InpBELock=0.20
+InpUseTrailing=false
+InpTrailStart=1.50
+InpTrailDist=1.00
+InpUseReverse=true
+InpReverseStartPts=0.50
+InpReverseGap=1.20
+InpTrailOnNewBarOnly=false
+InpUseCooldown=true
+InpCooldownSec=60
+InpCooldownAnyLoss=false
+InpCooldownKillPend=true
+InpMaxSLPerDay=0
+InpUseTimeFilter=true
+InpAutoGMTOffset=true
+InpServerGMTOffset=3
+InpS1_On=true
+InpS1_StartH=7
+InpS1_StartM=0
+InpS1_EndH=8
+InpS1_EndM=30
+InpS2_On=true
+InpS2_StartH=19
+InpS2_StartM=0
+InpS2_EndH=20
+InpS2_EndM=30
+InpS3_On=true
+InpS3_StartH=2
+InpS3_StartM=0
+InpS3_EndH=3
+InpS3_EndM=30
+InpCloseAllAtSessionEnd=false
+InpLotMode=1
+InpRiskPercent=1.0
+InpFixedLot=0.01
+InpMaxLot=0.50
+InpMaxSpread=0.60
+InpShowHUD=true
+InpHUD_X=16
+InpHUD_Y=26
+InpHUD_FPS_ms=60
+InpHUD_Particles=true
+InpHUD_Sparkline=true

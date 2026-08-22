@@ -1,0 +1,56 @@
+; ============================================================
+; XAUUSD Straddle Scalper TH v4.10 — ค่าแนะนำ (แก้ล็อตแล้ว v2)
+; เบรกฉุกเฉินผ่อนแล้ว: ชั้น1+ชั้น2 ปิด เหลือชั้น3 ที่ 35% เท่านั้น
+;
+; !! แก้ไข 17/08/2569 !!
+;   InpUseAutoLot  true -> false  (ใช้ล็อตคงที่ 0.01 ตามที่ทดสอบจริง)
+;   เหตุผล: SL ของ EA ตัวนี้ = 700 จุด ($7.00) ถ้าใช้ล็อตอัตโนมัติ 1%
+;           บนทุน $2,640 จะได้ล็อต 0.03 = เสี่ยง $21 ต่อไม้
+;           และผลทดสอบตกจาก 4/4 ช่อง เหลือ 3/4 (PF 0.996)
+; ============================================================
+InpMagicNumber=990125
+InpBuyStopDistance=80
+InpSellStopDistance=80
+InpStopLoss=700
+InpTakeProfit=1000
+InpTimeStopMinutes=0
+InpTimeStopMinPts=30
+InpUseTimeFilter=false
+InpSession1Start=07:00
+InpSession1End=08:30
+InpSession2Start=19:00
+InpSession2End=20:30
+InpSession3Start=02:00
+InpSession3End=03:30
+InpCloseOnSessionEnd=true
+InpGraceMinutes=0
+InpBreakEvenTrigger=60
+InpBreakEvenOffset=30
+InpProfitLockGap=250
+InpUseBarTrail=false
+InpTrailBufferPts=200
+InpSpreadCompPts=30
+InpUseAutoLot=false
+InpRiskPercent=1.0
+InpFixedLot=0.01
+InpMaxSpread=50
+InpSlippage=30
+InpMaxRetries=3
+InpComment=XAU_TH_v41
+InpUseDailyLossStop=false
+InpDailyLossPct=20.0
+InpMinTradesBeforeDayStop=12
+InpUseLossStreakStop=false
+InpMaxLossStreak=12
+InpUseEquityGuard=true
+InpMaxDrawdownPct=35.0
+InpKeepPeakOnRestart=false
+InpCloseAllOnHalt=false
+InpResetHaltNow=false
+InpUseDailyProfitStop=false
+InpDailyProfitPct=5.0
+InpShowDashboard=true
+InpShowRobot=true
+InpCompactMode=false
+InpPanelX=12
+InpPanelY=28
