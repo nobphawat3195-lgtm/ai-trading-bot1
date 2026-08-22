@@ -1,0 +1,5 @@
+charts/
+*.htm
+*.html
+*.csv
+__pycache__/

@@ -16,7 +16,24 @@ MQL5/
     XAU_StraddleReverse_v4_40.mq5   ซอร์ส v4.41 (เก็บไว้อ้างอิง)
   Presets/                    ไฟล์ .set ชุด v4.40
 workflow/                     สคริปต์ compile / backtest / optimize ผ่าน command line
+tools/
+  mt5_report_charts.py        อ่านรายงาน Strategy Tester (.htm) -> กราฟ 4 ใบ + สรุปตัวเลข
+  fonts/                      Noto Sans Thai (ให้ป้ายภาษาไทยบนกราฟไม่เพี้ยน)
 ```
+
+## ทำกราฟจากผล backtest
+
+```bash
+pip install matplotlib
+python3 tools/mt5_report_charts.py ReportTester-12345.htm -o charts/ --server-gmt 3
+```
+
+ได้ `charts/1_equity.png` (เส้นทุน + drawdown), `2_monthly.png` (กำไรรายเดือน),
+`3_by_hour.png` (กำไรแยกรายชั่วโมง มีทั้งแกนเวลาเซิร์ฟเวอร์และ UTC) และ
+`4_dist.png` (การกระจายกำไรต่อไม้)
+
+`3_by_hour.png` คือใบที่ตอบว่าขอบของ EA มาจากชั่วโมงไหนจริง — ใช้ตรวจปัญหา DST
+ในหัวข้อ 1 ของ `docs/EXNESS_vs_VTMARKETS.md`
 
 ## เริ่มยังไง
 
