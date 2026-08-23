@@ -329,15 +329,21 @@ def chart_dist(s, out):
 
 def main():
     ap = argparse.ArgumentParser(description="สร้างกราฟจากรายงาน Strategy Tester ของ MT5")
-    ap.add_argument("report", help="ไฟล์ ReportTester-xxxx.htm")
+    ap.add_argument("report", help="ไฟล์ ReportTester-xxxx.htm หรือ deals.csv จาก ea_backtest_engine.py")
     ap.add_argument("-o", "--outdir", default="charts", help="โฟลเดอร์ผลลัพธ์")
     ap.add_argument("--server-gmt", type=int, default=0,
                     help="เขตเวลาเซิร์ฟเวอร์ (ใช้ใส่แกน UTC ในกราฟชั่วโมง)")
     args = ap.parse_args()
 
-    parser = TableGrab()
-    parser.feed(read_text(args.report))
-    stats = summarize(extract_deals(parser.rows))
+    if args.report.lower().endswith(".csv"):
+        import csv as _csv
+        with open(args.report, newline="", encoding="utf-8-sig") as fh:
+            rows = [r for r in _csv.reader(fh) if any(c.strip() for c in r)]
+    else:
+        parser = TableGrab()
+        parser.feed(read_text(args.report))
+        rows = parser.rows
+    stats = summarize(extract_deals(rows))
     print_summary(stats, args.server_gmt)
 
     os.makedirs(args.outdir, exist_ok=True)

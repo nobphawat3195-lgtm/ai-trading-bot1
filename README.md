@@ -17,9 +17,40 @@ MQL5/
   Presets/                    ไฟล์ .set ชุด v4.40
 workflow/                     สคริปต์ compile / backtest / optimize ผ่าน command line
 tools/
-  mt5_report_charts.py        อ่านรายงาน Strategy Tester (.htm) -> กราฟ 4 ใบ + สรุปตัวเลข
+  ea_backtest_engine.py       ตัวจำลอง EA บนข้อมูลราคาจริง + กวาดหน้าต่างเวลาทั้งวัน
+  mt5_report_charts.py        รายงาน Strategy Tester (.htm) หรือ deals.csv -> กราฟ 4 ใบ
   fonts/                      Noto Sans Thai (ให้ป้ายภาษาไทยบนกราฟไม่เพี้ยน)
 ```
+
+## EA Auto Backtest Engine
+
+จำลอง XAU StraddleReverse บนข้อมูล bid/ask จริง โดยไม่ต้องมี MT5
+
+```bash
+# 1. ส่งออกข้อมูลจาก MT5 ด้วย MQL5/Scripts/ExportSessionTicks.mq5
+#    (ตั้ง InpWinStartUTC/EndUTC ให้กว้างกว่าหน้าต่างจริงอย่างน้อย 90 นาที
+#     ไม่งั้นกวาดหน้าต่างข้างเคียงไม่ได้)
+
+# 2. รันชุดค่าเดียว
+python3 tools/ea_backtest_engine.py ticks.csv --server-gmt 3
+
+# 3. กวาดหน้าต่างเวลา -- ตอบว่าขอบอยู่ชั่วโมงไหนจริง
+python3 tools/ea_backtest_engine.py ticks.csv --server-gmt 3 --sweep-window
+
+# 4. ใส่ต้นทุนของโบรกใหม่โดยไม่ต้องมีบัญชีโบรกนั้น
+python3 tools/ea_backtest_engine.py ticks.csv --server-gmt 3 --commission 3.5
+
+# 5. ทำกราฟจากผล
+python3 tools/ea_backtest_engine.py ticks.csv --server-gmt 3 --out-deals deals.csv
+python3 tools/mt5_report_charts.py deals.csv -o charts/
+```
+
+จำลองครบ: คร่อมสองฝั่ง · ลบฝั่งที่เหลือเมื่อฝั่งหนึ่งติด · SL ไม่มี TP ·
+ไม้กลับด้านพร้อมการไล่ราคา · คูลดาวน์หลัง SL · เบรก SL รายวัน ·
+ปิดไม้ท้ายช่วง · ตัวกรอง ATR เร็ว/ช้า · ตัวกรองสเปรด · คอมมิชชัน · สลิปเพจ
+
+**ไม่ใช่ตัวแทน Strategy Tester** — ข้อมูล 1 วินาทีมองไม่เห็นราคาที่วิ่งผ่านภายใน
+วินาทีเดียวกัน เลขกำไรสัมบูรณ์ให้ยึด Strategy Tester ตัวนี้ใช้เทียบชุดค่ากันเอง
 
 ## ทำกราฟจากผล backtest
 
