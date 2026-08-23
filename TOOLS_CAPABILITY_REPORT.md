@@ -44,10 +44,18 @@ Backtest/OOS/Walk-Forward — ดูสถานะเต็มใน `EDGE_DISC
 │   ├── Experts/XAU_StraddleReverse_v4_40.mq5   EA เดิม source v4.41 (1,315 บรรทัด)
 │   ├── Scripts/BrokerProbe.mq5                 ตรวจสเปกโบรก/GMT/DST (รันบน MT5 จริง)
 │   ├── Scripts/ExportSessionTicks.mq5          export bid/ask 1 วิ -> CSV (รันบน MT5 จริง)
+│   ├── Scripts/ExportOHLC.mq5                  [ใหม่] export แท่ง OHLC เต็มวัน ทุก
+│   │                                            session -> CSV (รันบน MT5 จริง) — สำหรับ
+│   │                                            hypothesis ใหม่ 30 ข้อที่ไม่ได้จำกัดแค่
+│   │                                            หน้าต่างเวลาเดิมของ StraddleReverse
 │   └── Presets/*.set                           3 ไฟล์ preset พารามิเตอร์
 ├── docs/EXNESS_vs_VTMARKETS.md                 บันทึกปัญหา DST/GMT ของ EA เดิม (สำคัญ)
 ├── tools/
 │   ├── ea_backtest_engine.py                   Python replay simulator เฉพาะ StraddleReverse
+│   ├── hypothesis_backtest_engine.py           [ใหม่] เอนจินทั่วไป รับ Strategy plug-in
+│   │                                            ทดสอบ hypothesis ใหม่ได้ทุกข้อ (มี
+│   │                                            self-test ผ่านด้วยข้อมูลสังเคราะห์แล้ว
+│   │                                            รอข้อมูลจริงจาก ExportOHLC.mq5)
 │   ├── mt5_report_charts.py                    ทำกราฟจากรายงาน .htm หรือ deals.csv
 │   └── fonts/NotoSansThai-Regular.ttf
 ├── workflow/
@@ -112,6 +120,30 @@ Backtest/OOS/Walk-Forward — ดูสถานะเต็มใน `EDGE_DISC
 - ผู้เขียนเดิมระบุเองในคอมเมนต์ (บรรทัด 24-30): ความละเอียด 1 วินาทีไม่ใช่ทุก tick, เวลา SL
   กับไม้กลับด้านโดนพร้อมกันเลือก SL ก่อนเสมอ (pessimistic), ตัวเลขกำไรสัมบูรณ์ไม่เท่ากับ
   Strategy Tester จริง — ใช้เทียบ A/B กันเองได้ดีกว่าใช้อ้างอิงตัวเลขเดี่ยว
+
+## 7.1 อัปเดต — เครื่องมือใหม่ที่เตรียมไว้แล้ว (2026-08-23, รอบต่อจากรายงานแรก)
+
+เพื่อไม่ต้องรอนิ่งจนกว่าจะมีข้อมูล จึงเตรียม 2 เครื่องมือให้พร้อมใช้ทันทีที่ผู้ใช้ส่งข้อมูล
+ราคาจริงเข้ามา (ยังไม่ได้รันกับข้อมูลจริง — ตรวจแค่กลไกเอนจินเองด้วยข้อมูลสังเคราะห์เท่านั้น):
+
+- **`MQL5/Scripts/ExportOHLC.mq5`** — export แท่ง OHLC (M1/M5/M15/M30/H1/H4/Daily) เต็มวัน
+  ทุก session ไม่จำกัดแค่หน้าต่าง 1.5-3 ชม./วันแบบ `ExportSessionTicks.mq5` เดิม (ซึ่งออกแบบ
+  มาสำหรับ StraddleReverse โดยเฉพาะ) เบากว่า tick มาก จึง export ได้ยาวเป็นปีโดยไฟล์ไม่ใหญ่
+  เกินไป — นี่คือไฟล์ที่ต้องให้ผู้ใช้รันเพื่อได้ข้อมูลป้อน Statistical Discovery ของ
+  hypothesis ใหม่ 30 ข้อ
+- **`tools/hypothesis_backtest_engine.py`** — เอนจินทั่วไป (generic) ที่รับ `Strategy`
+  เป็น plug-in (entry rule + optional exit rule) แทนที่จะฮาร์ดโค้ด StraddleReverse เหมือน
+  `ea_backtest_engine.py` เดิม รองรับครบตามที่ MASTER COMMAND ต้องการ: แบ่งข้อมูล
+  Discovery/Validation/OOS ตามเวลา (ข้อ 9), Walk-Forward (ข้อ 10), Monte Carlo trade-order
+  randomization + Stress test สเปรด/สลิปเพจ/คอมมิชชัน/entry-delay/tie-break (ข้อ 11) —
+  ทดสอบกลไกตัวเองผ่านแล้วด้วย `--selftest` (ข้อมูลสังเคราะห์ random-walk เท่านั้น ไม่ใช่ผล
+  backtest จริง และห้ามอ้างอิงเป็นหลักฐาน edge ใดๆ) ยังไม่มี Strategy ของ hypothesis ใด
+  implement จริง — รอข้อมูลก่อนเขียน (เขียน entry/exit ของแต่ละ hypothesis โดยไม่มีข้อมูล
+  จริงตรวจสอบจะเสี่ยง bug เงียบที่ตรวจไม่เจอ)
+
+เครื่องมือทั้งสองนี้เป็นส่วนขยายของตระกูลเครื่องมือเดิมในสไตล์เดียวกัน (Python + MQL5
+script คู่กัน) ไม่ใช่การสร้างเอนจินคู่ขนานที่ซ้ำซ้อนกับ Strategy Tester หรือ
+`ea_backtest_engine.py` เดิม
 
 ## 8. ข้อสรุป: จะเดินหน้าต่อยังไงตาม MASTER COMMAND
 

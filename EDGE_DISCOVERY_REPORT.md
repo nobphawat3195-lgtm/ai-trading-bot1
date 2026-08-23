@@ -35,33 +35,47 @@ Top 5 New Edges ยังไม่มีให้รายงานในรอ�
 | `research/hypotheses/*.md` (8 ไฟล์, 30 hypotheses, หมวด A-H) | เสร็จ — ครบทุก field
   ตามฟอร์แมตข้อ 4 พร้อม Test Method ต่อข้อ |
 | `research/EDGE_DATABASE.md` | เสร็จ — ลงทะเบียนทั้ง 30 ข้อ สถานะ PENDING DATA |
+| `MQL5/Scripts/ExportOHLC.mq5` | เสร็จ — สคริปต์ export OHLC เต็มวันทุก session (ใหม่) |
+| `tools/hypothesis_backtest_engine.py` | เสร็จ — เอนจินทั่วไป รองรับ split/walk-forward/
+  Monte Carlo/stress test ผ่าน self-test ด้วยข้อมูลสังเคราะห์แล้ว (ยังไม่มี Strategy
+  ของ hypothesis ใด implement จริง — รอข้อมูลก่อนเขียนเพื่อกัน bug เงียบ) |
+
+**สำคัญ**: ตัวเลขใดๆ ที่ปรากฏใน self-test ของ `hypothesis_backtest_engine.py` มาจาก
+random-walk สังเคราะห์ ไม่ใช่ตลาดจริง และไม่ใช่ผล backtest ของ hypothesis ใดทั้งสิ้น —
+ใช้ตรวจกลไกเอนจินเท่านั้น ห้ามนำไปอ้างเป็นหลักฐาน edge เด็ดขาด
 
 ## สิ่งที่ต้องการจากผู้ใช้เพื่อเดินหน้าต่อ (บล็อกอยู่จริง ไม่ใช่ทางเลือก)
 
 ต้องมีอย่างน้อย 1 ใน 2 ทางนี้ก่อน Statistical Discovery จะเริ่มได้:
 
 **ทาง A — ส่งข้อมูลราคาจริงเข้ามา** (แนะนำ เพราะทำต่อในเซสชันนี้ได้ทันที)
-- OHLC XAUUSD M1 (และ M5/M15/H1/Daily ถ้ามี) ให้ครอบคลุม **ทั้งวัน ไม่ใช่แค่หน้าต่าง 1.5-3
-  ชม./วันที่ EA เดิมเทรด** เพราะ hypothesis ใหม่ทั้ง 30 ข้อกระจายอยู่ทุก session (Asian/
-  London/NY/Overlap) ไม่ได้จำกัดแค่ 3 ช่วงเวลาของ EA เดิม
+- รัน **`MQL5/Scripts/ExportOHLC.mq5`** (สร้างเสร็จแล้วในรอบนี้) บนกราฟ XAUUSD ของ MT5 —
+  ตั้ง `InpTF` เลือก timeframe (แนะนำรัน M5 อย่างน้อย 1 รอบสำหรับ execution + H1 อีก 1 รอบ
+  สำหรับบริบท market-structure ของหมวด B/D) ตั้งช่วงวันที่ให้ยาวที่สุดเท่าที่มีประวัติ แล้ว
+  ส่งไฟล์ `xau_ohlc_*.csv` ที่ได้กลับมา — ครอบคลุม **ทั้งวัน ไม่ใช่แค่หน้าต่าง 1.5-3 ชม./วัน
+  ที่ EA เดิมเทรด** เพราะ hypothesis ใหม่ทั้ง 30 ข้อกระจายอยู่ทุก session (Asian/London/NY/
+  Overlap)
 - ยิ่งย้อนหลังได้นานยิ่งดี (ควรได้อย่างน้อย 12-24 เดือนสำหรับ M1/M5 discovery, 2-3 ปีสำหรับ
   hypothesis หมวด H ที่ต้องการ sample size ระดับปีเพื่อแยก seasonality จริงจาก noise)
-- ถ้ามี tick-volume ติดมาด้วยจะใช้กับหมวด F1/F4/G4 ได้ (VWAP, volume-burst)
-- export ผ่าน MT5 script/indicator ปกติ หรือจาก data vendor อื่นก็ได้ ขอแค่รูปแบบ
-  timestamp,open,high,low,close(,volume) ที่ระบุ timezone ชัดเจน
+- ไฟล์ที่ได้จะมี tick-volume ติดมาด้วยอัตโนมัติ ใช้กับหมวด F1/F4/G4 ได้ (VWAP, volume-burst)
+- ถ้าใช้ script/data source อื่นแทนก็ได้ ขอแค่รูปแบบ
+  timestamp,open,high,low,close(,volume) ที่ระบุ timezone ชัดเจน — โหลดผ่าน
+  `tools/hypothesis_backtest_engine.py:load_ohlc_csv()` ได้เหมือนกัน
 
 **ทาง B — รัน MT5 Strategy Tester เองแล้วส่งผลกลับมา** (ใช้ตรวจ EA เดิมต่อ ไม่ใช้ทดสอบ
 hypothesis ใหม่ เพราะ hypothesis ใหม่ยังไม่มี MQL5 prototype)
 - ใช้ `workflow/*.bat` ตามคู่มือ `workflow/00_อ่านก่อนเริ่ม.txt` แก้ path ให้ตรงเครื่องตัวเอง
   ก่อนรัน
 
-เมื่อมีข้อมูลจากทาง A แล้ว งานขั้นถัดไปคือ:
-1. เขียน generic Python OHLC backtest engine (ต่อยอดจาก `tools/ea_backtest_engine.py`
-   แต่ generalize ให้รับ entry/exit rule ตาม hypothesis แทนที่จะฮาร์ดโค้ด StraddleReverse)
-2. รัน Statistical Discovery ของทั้ง 30 hypotheses บน 60% แรกของข้อมูล (แบ่งตามข้อ 9)
+เมื่อมีข้อมูลจากทาง A แล้ว งานขั้นถัดไปคือ (เอนจินข้อ 1 เตรียมพร้อมแล้ว):
+1. ~~เขียน generic Python OHLC backtest engine~~ **เสร็จแล้ว** —
+   `tools/hypothesis_backtest_engine.py` (ผ่าน self-test ด้วยข้อมูลสังเคราะห์)
+2. implement แต่ละ hypothesis เป็นคลาส `Strategy` (entry/exit ตาม field ที่นิยามไว้ใน
+   `research/hypotheses/*.md`) แล้วรัน Statistical Discovery บน 60% แรกของข้อมูลจริง
+   (แบ่งด้วย `split_discovery_validation_oos()`) — ยังทำไม่ได้จนกว่าจะมีข้อมูลจริง
 3. คัด candidate ที่ผ่านเกณฑ์สถิติเบื้องต้น → เขียน MQL5 prototype (เฉพาะที่ผ่านเท่านั้น)
-4. Validation (20%) → Out-of-Sample (20%) → Walk-Forward → Robustness → Scoring
-   ตามข้อ 9-13 ของ MASTER COMMAND
+4. Validation (20%) → Out-of-Sample (20%) → Walk-Forward (`walk_forward_windows()`) →
+   Robustness (`monte_carlo_trade_order()` + `stress_test()`) → Scoring ตามข้อ 9-13
 5. อัปเดต `research/EDGE_DATABASE.md` และรายงานผลจริงในไฟล์นี้ทุกรอบ
 
 ## คำมั่นสัญญาต่อกฎข้อ 16, 18, 19
