@@ -28,7 +28,7 @@
 
 | ID | Name | Code Version | Dataset | Backtest Period | Discovery | OOS | Walk-Forward | Robustness | Score | Decision | Reject Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| A1 | Liquidity Sweep Reversal | - | - | - | - | - | - | - | - | PENDING DATA | รอ OHLC M1/M5 จริง |
+| A1 | Liquidity Sweep Reversal | pilot v0 (simplified) | XAUUSDVIP M1, 1wk real | 2026-06-30→07-07 (pilot only) | ไม้130 สุทธิ-63.18 PF0.61 | - | - | MC+stress รันแล้ว (pilot) | - | PILOT ONLY — NOT DISCOVERY | sample เล็กเกิน + threshold ยังไม่ calibrate ดูรายละเอียด research/pilot/ |
 | A2 | Stop Run Continuation | - | - | - | - | - | - | - | - | PENDING DATA | รอ OHLC M1/M5 จริง |
 | A3 | Equal High/Low Reclaim | - | - | - | - | - | - | - | - | PENDING DATA | รอ OHLC M5/M15 จริง |
 | A4 | Prev Session H/L Sweep-Fail | - | - | - | - | - | - | - | - | PENDING DATA | รอ OHLC M1/M15 จริง |
@@ -48,9 +48,9 @@
 | E4 | Asian Range BO at London | - | - | - | - | - | - | - | - | PENDING DATA | รอ M15 จริง |
 | F1 | VWAP Extreme Deviation | - | - | - | - | - | - | - | - | PENDING DATA | รอ M1+tick-volume จริง |
 | F2 | Asian Range Reversion | - | - | - | - | - | - | - | - | PENDING DATA | รอ M5 จริง |
-| F3 | Consecutive-Candle Overext. | - | - | - | - | - | - | - | - | PENDING DATA | รอ M1/M5 จริง |
+| F3 | Consecutive-Candle Overext. | pilot v0 (simplified) | XAUUSDVIP M1, 1wk real | 2026-06-30→07-07 (pilot only) | ไม้181 สุทธิ-97.75 PF0.52 | - | - | MC+stress รันแล้ว (pilot) | - | PILOT ONLY — NOT DISCOVERY | sample เล็กเกิน + threshold ยังไม่ calibrate ดูรายละเอียด research/pilot/ |
 | F4 | VWAP Band Fade | - | - | - | - | - | - | - | - | PENDING DATA | รอ M1/M5+volume จริง |
-| G1 | Momentum Burst Continuation | - | - | - | - | - | - | - | - | PENDING DATA | รอ M1 จริง |
+| G1 | Momentum Burst Continuation | pilot v0 (simplified) | XAUUSDVIP M1, 1wk real | 2026-06-30→07-07 (pilot only) | ไม้276 สุทธิ-379.13 PF0.55 | - | - | MC+stress รันแล้ว (pilot) | - | PILOT ONLY — NOT DISCOVERY | sample เล็กเกิน + threshold ยังไม่ calibrate ดูรายละเอียด research/pilot/ |
 | G2 | Breakout-and-Retest | - | - | - | - | - | - | - | - | PENDING DATA | รอ M5 จริง |
 | G3 | Shallow-Pullback Continuation | - | - | - | - | - | - | - | - | PENDING DATA | รอ M5 จริง |
 | G4 | Tick-Volume Burst Confirm | - | - | - | - | - | - | - | - | PENDING DATA | รอ M1+tick-volume จริง |
@@ -63,7 +63,17 @@
 ทดสอบ ห้ามตีความว่า hypothesis เหล่านี้ล้มเหลวแล้ว ตามกฎข้อ 18-19 ของ MASTER COMMAND
 (ห้ามรายงานผลที่ไม่ได้รันจริง — แถวเหล่านี้จึงไม่มีตัวเลขผลลัพธ์ใดๆ ใส่ไว้เลย)
 
+**"PILOT ONLY — NOT DISCOVERY" ≠ "REJECT" เช่นกัน** — A1/G1/F3 รันจริงบนข้อมูล 1 สัปดาห์
+แล้ว (ไม่ใช่สมมติ) แต่ sample เล็กเกินไปและ implementation เป็นเวอร์ชันตัดทอน ผลขาดทุน
+ที่เห็นไม่ใช่หลักฐานเพียงพอจะ REJECT hypothesis เต็มรูปแบบ — รายละเอียดที่
+`research/pilot/PILOT_RESULTS_2026-07-01_to_07.md`
+
 ## Log การอัปเดต
 
 - **2026-08-23**: สร้างฐานข้อมูลครั้งแรก ลงทะเบียน 30 hypotheses (หมวด A-H) สถานะ PENDING
   DATA ทั้งหมด — ยังไม่มีข้อมูลราคาจริงในเซสชันนี้ (ดูรายละเอียดใน `TOOLS_CAPABILITY_REPORT.md`)
+- **2026-08-23** (รอบ 2): ผู้ใช้ส่งไฟล์ M1 OHLC จริงของ XAUUSD (VT Markets VIP, 1 สัปดาห์
+  2026-06-30→07-07) ผ่าน Google Drive — ขยาย `hypothesis_backtest_engine.py` ให้อ่าน
+  รูปแบบ MT5 native export ได้ แล้วรัน pilot บน A1/G1/F3 (เวอร์ชันตัดทอน) จริง สถานะ
+  เปลี่ยนเป็น `PILOT ONLY — NOT DISCOVERY` ยังต้องการข้อมูลยาวกว่านี้มาก (12-24 เดือน)
+  ก่อนเริ่ม Discovery จริงตามข้อ 5 ของ MASTER COMMAND

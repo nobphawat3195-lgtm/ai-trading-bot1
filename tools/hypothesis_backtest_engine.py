@@ -102,40 +102,85 @@ def _parse_time(s: str) -> Optional[datetime]:
 
 
 def load_ohlc_csv(path: str, server_gmt_offset: Optional[int] = None) -> List[Bar]:
-    """โหลด CSV จาก ExportOHLC.mq5 แล้วแปลงเวลาเซิร์ฟเวอร์ -> UTC
+    """โหลด CSV แท่ง OHLC แล้วแปลงเวลาเซิร์ฟเวอร์ -> UTC รองรับ 2 รูปแบบอัตโนมัติ:
 
-    server_gmt_offset: ถ้าระบุ จะใช้แทนค่าที่อ่านได้จาก metadata ในไฟล์ (ไว้แก้กรณี
-    BrokerProbe ให้ค่าจริงต่างจากที่ตั้งไว้ตอน export)
+    1) ExportOHLC.mq5 (ไฟล์ในสไตล์ที่ script คู่มือนี้เขียน): คั่นด้วย comma, มี
+       บรรทัด metadata ขึ้นต้นด้วย # บอก server_gmt_offset ไว้ในไฟล์ ไม่ต้อง
+       ระบุ server_gmt_offset ซ้ำก็ได้ (ใช้ค่าจากไฟล์)
+    2) MT5 native export (สิ่งที่ผู้ใช้ส่วนใหญ่มีอยู่แล้วจาก Export Bars ใน MT5,
+       เช่น "XAUUSDVIP_M1_....csv"): คั่นด้วย tab, header
+       `<DATE> <TIME> <OPEN> <HIGH> <LOW> <CLOSE> <TICKVOL> <VOL> <SPREAD>`
+       **ไม่มี metadata เขตเวลาฝังอยู่ในไฟล์เลย** — ต้องระบุ server_gmt_offset
+       เอง (ดูจาก BrokerProbe.mq5 หรือ broker statement) ไม่งั้นจะ raise error
+       เพราะ default เป็น 0 แบบเงียบๆ เสี่ยงทำให้ผลลัพธ์ session-based ทั้งหมดผิด
+       โดยไม่มีใครรู้ตัว
+
+    server_gmt_offset: ถ้าระบุ จะใช้แทนค่าที่อ่านได้จาก metadata ในไฟล์เสมอ
     """
-    bars: List[Bar] = []
-    meta = {}
     with open(path, newline="", encoding="utf-8-sig", errors="replace") as fh:
-        rdr = csv.reader(fh)
+        first_line = fh.readline()
+    delim = "\t" if "\t" in first_line else ","
+
+    with open(path, newline="", encoding="utf-8-sig", errors="replace") as fh:
+        rdr = csv.reader(fh, delimiter=delim)
         rows = list(rdr)
+
     idx = 0
+    meta = {}
     if rows and rows[0] and rows[0][0].strip().startswith("#"):
         meta = _parse_meta(",".join(rows[0]))
         idx = 1
-    if idx < len(rows) and rows[idx] and rows[idx][0].strip().lower().startswith("server_time"):
-        idx += 1
+
+    fmt = None  # "export_ohlc" (1 คอลัมน์เวลา) หรือ "mt5_native" (date+time แยกกัน)
+    if idx < len(rows) and rows[idx]:
+        head0 = rows[idx][0].strip().lower()
+        if head0.startswith("server_time"):
+            fmt = "export_ohlc"
+            idx += 1
+        elif head0.strip("<>").lower() == "date":
+            fmt = "mt5_native"
+            idx += 1
 
     gmt = server_gmt_offset
     if gmt is None:
-        gmt = int(meta.get("server_gmt_offset", 0))
+        if "server_gmt_offset" in meta:
+            gmt = int(meta["server_gmt_offset"])
+        elif fmt == "mt5_native" or fmt is None:
+            raise SystemExit(
+                f"ไม่พบ server_gmt_offset ในไฟล์ {path} (ไฟล์รูปแบบ MT5 native export "
+                "ไม่มี metadata เขตเวลาฝังไว้) — ต้องเรียก load_ohlc_csv(path, "
+                "server_gmt_offset=N) ระบุเอง (ดูค่าจริงจาก BrokerProbe.mq5 หรือ "
+                "broker statement) ห้ามเดา/ปล่อยเป็น 0 เงียบๆ เพราะจะทำให้ผลลัพธ์ "
+                "ที่ผูกกับ session (หมวด E และอื่นๆ) ผิดทั้งหมดโดยไม่มีใครรู้ตัว"
+            )
     shift = timedelta(hours=gmt)
 
+    bars: List[Bar] = []
     for row in rows[idx:]:
-        if len(row) < 5:
-            continue
-        t = _parse_time(row[0])
-        if t is None:
-            continue
-        try:
-            o, h, l, c = (float(row[1]), float(row[2]), float(row[3]), float(row[4]))
-        except ValueError:
-            continue
-        vol = int(float(row[5])) if len(row) > 5 and row[5].strip() else 0
-        spr = float(row[6]) if len(row) > 6 and row[6].strip() else 0.0
+        if fmt == "mt5_native":
+            if len(row) < 9:
+                continue
+            t = _parse_time(f"{row[0]} {row[1]}")
+            if t is None:
+                continue
+            try:
+                o, h, l, c = (float(row[2]), float(row[3]), float(row[4]), float(row[5]))
+            except ValueError:
+                continue
+            vol = int(float(row[6])) if row[6].strip() else 0
+            spr = float(row[8]) if row[8].strip() else 0.0
+        else:
+            if len(row) < 5:
+                continue
+            t = _parse_time(row[0])
+            if t is None:
+                continue
+            try:
+                o, h, l, c = (float(row[1]), float(row[2]), float(row[3]), float(row[4]))
+            except ValueError:
+                continue
+            vol = int(float(row[5])) if len(row) > 5 and row[5].strip() else 0
+            spr = float(row[6]) if len(row) > 6 and row[6].strip() else 0.0
         bars.append(Bar(time=t - shift, open=o, high=h, low=l, close=c,
                          volume=vol, spread=spr))
 
@@ -143,7 +188,9 @@ def load_ohlc_csv(path: str, server_gmt_offset: Optional[int] = None) -> List[Ba
         raise SystemExit(
             f"อ่านข้อมูลไม่ได้เลยจาก {path}\n"
             "  -> ต้องเป็น CSV จาก MQL5/Scripts/ExportOHLC.mq5 "
-            "(server_time,open,high,low,close,tick_volume,spread)"
+            "(server_time,open,high,low,close,tick_volume,spread) "
+            "หรือ MT5 native Export Bars (<DATE> <TIME> <OPEN> <HIGH> <LOW> <CLOSE> "
+            "<TICKVOL> <VOL> <SPREAD> คั่นด้วย tab)"
         )
     bars.sort(key=lambda b: b.time)
     print(f"โหลด {len(bars):,} แท่ง  {bars[0].time:%Y-%m-%d %H:%M} ถึง "
