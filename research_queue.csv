@@ -1,0 +1,6 @@
+id,priority,status,strategy,version,hypothesis,next_action,pass_gate,notes
+1,1,TODO,THAOFORAX,current,"Current THAOFORAX logic may contain a raw XAUUSD edge that can be isolated and improved","Inspect source; document entry/exit/risk/session/regime; compile; run baseline real-tick test","PF>1.15 to continue; preferred PF>=1.30 and DD<=15%","Do not optimize before baseline"
+2,2,TODO,THAOFORAX,current,"One or more logic modules may be hurting expectancy","Run ablation on major entry/exit/filter modules","Keep only modules improving expectancy/robustness OOS","Record each ablation result"
+3,3,TODO,THAOFORAX,current,"Risk/exit design may drive drawdown more than entry quality","Analyze MAE/MFE, loss streaks, holding time, stop/TP behavior","Reduce DD without destroying PF","Keep entry fixed during exit study"
+4,4,TODO,THAOFORAX,current,"Session/regime conditioning may improve robustness","Compare no filter vs relevant sessions/regimes","Improvement must persist OOS","Verify timezone first"
+5,5,TODO,RepositoryResearch,v1,"If THAOFORAX queue is exhausted, public MQL5/XAUUSD source may provide new hypotheses","Research only 3-5 high-quality source-available ideas","Readable source, testable, non-duplicate","Do not import random EAs"
