@@ -1,0 +1,1 @@
+experiment_id,date,strategy,version,hypothesis,symbol,timeframe,test_period,test_model,parameters,pf,max_equity_dd_pct,trades,win_rate_pct,expectancy,net_profit,sharpe,recovery_factor,avg_win,avg_loss,longest_loss_streak,mae,mfe,holding_time,result,reason,next_action
