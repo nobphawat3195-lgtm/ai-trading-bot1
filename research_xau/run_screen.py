@@ -286,6 +286,12 @@ def run_ict():
         decision=row.time+pd.Timedelta(minutes=5)  # current M5 is now CLOSED
         now_wib=decision.tz_convert("Asia/Jakarta")
         done.extend(ict_exit(open_tr,row,now_wib.to_pydatetime()))
+        # Original entry profile never admits Asia/dead hours, and London only admits
+        # Mon-Wed. Gate those before expensive HTF/FVG calculations; signal semantics
+        # are unchanged because these bars could never execute a trade.
+        ses=get_session(now_wib); dow=now_wib.weekday()
+        if ses not in ("LONDON","NY"): continue
+        if ses=="LONDON" and dow not in (0,1,2): continue
         # CAUSAL HTF FIX: only bars whose full duration has closed by decision time.
         d_ns=int(decision.value)
         j15=int(np.searchsorted(m15_available,d_ns,side="right"))
@@ -297,7 +303,6 @@ def run_ict():
         sig=fvg_retest(x15,bias)
         if not sig: continue
         side,extreme=sig
-        ses=get_session(now_wib); dow=now_wib.weekday()
         kz=ses in ("ASIA","LONDON","NY")
         conf=int(kz)+int((side=="BUY" and bias=="BULLISH") or (side=="SELL" and bias=="BEARISH"))+1
         valid=(ses=="LONDON" and dow in (0,1,2) and conf>=2) or (ses=="NY" and conf>=3)
