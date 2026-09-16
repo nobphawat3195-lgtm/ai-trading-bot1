@@ -7,16 +7,16 @@ import pandas as pd
 RULES={"M1":"1min","M5":"5min","M15":"15min","H1":"1h","H4":"4h","D1":"1D"}
 
 def month_to_m1(path: Path) -> pd.DataFrame:
-    d=pd.read_parquet(path,columns=["ts","bid","ask","bid_vol","ask_vol"])
-    d["ts"]=pd.to_datetime(d["ts"],utc=True)
+    d=pd.read_parquet(path,columns=["timestamp","bid","ask","bid_vol","ask_vol"])
+    d["timestamp"]=pd.to_datetime(d["timestamp"],utc=True)
     for c in ["bid","ask","bid_vol","ask_vol"]:
         d[c]=pd.to_numeric(d[c],errors="coerce")
-    d=d.dropna(subset=["ts","bid","ask"]).sort_values("ts")
+    d=d.dropna(subset=["timestamp","bid","ask"]).sort_values("ts")
     d=d[d.ask>=d.bid]
     d["mid"]=(d.bid+d.ask)/2.0
     d["spread"]=d.ask-d.bid
     d["volume"]=(d.bid_vol.fillna(0)+d.ask_vol.fillna(0))/2.0
-    d=d.set_index("ts")
+    d=d.set_index("timestamp")
     m=d.resample("1min",label="left",closed="left").agg(
         open=("mid","first"),high=("mid","max"),low=("mid","min"),close=("mid","last"),
         volume=("volume","sum"),spread=("spread","mean")
