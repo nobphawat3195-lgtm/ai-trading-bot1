@@ -11,7 +11,7 @@ def month_to_m1(path: Path) -> pd.DataFrame:
     d["timestamp"]=pd.to_datetime(d["timestamp"],utc=True)
     for c in ["bid","ask","bid_vol","ask_vol"]:
         d[c]=pd.to_numeric(d[c],errors="coerce")
-    d=d.dropna(subset=["timestamp","bid","ask"]).sort_values("ts")
+    d=d.dropna(subset=["timestamp","bid","ask"]).sort_values("timestamp")
     d=d[d.ask>=d.bid]
     d["mid"]=(d.bid+d.ask)/2.0
     d["spread"]=d.ask-d.bid
@@ -33,7 +33,16 @@ def resample(df,rule):
 def main():
     files=sorted(Path("data/ticks_repo").glob("20*/xauusd_20??_??.parquet"))
     if not files: raise SystemExit("No monthly parquet files found")
-    parts=[month_to_m1(p) for p in files]
+    parts=[]
+    for p in files:
+        try:
+            z=month_to_m1(p)
+            if len(z):
+                parts.append(z)
+        except Exception as e:
+            print(f"SKIP_BAD_FILE {p}: {type(e).__name__}: {e}")
+    if not parts:
+        raise SystemExit("No readable tick parquet files")
     m1=pd.concat(parts).sort_index()
     # exact-month files should not overlap; be defensive if they do.
     m1=m1[~m1.index.duplicated(keep="last")]
@@ -42,6 +51,18 @@ def main():
     out=Path("data/processed"); qdir=Path("data/quant_csv")
     out.mkdir(parents=True,exist_ok=True); qdir.mkdir(parents=True,exist_ok=True)
     print(f"Combined M1={len(m1):,} {m1.index.min()} -> {m1.index.max()}")
+    # coverage audit: report market-hour gaps longer than 10 minutes (weekends excluded)
+    delta=m1.index.to_series().diff()
+    gaps=[]
+    for tm,dt in delta[delta>pd.Timedelta(minutes=10)].items():
+        prev=tm-dt
+        # Ignore ordinary weekend gaps (~Fri->Sun/Mon); keep suspicious weekday/multi-day holes.
+        if prev.weekday()==4 and tm.weekday() in (6,0) and dt<pd.Timedelta(days=4):
+            continue
+        gaps.append((prev,tm,dt))
+    print(f"SUSPICIOUS_GAPS={len(gaps)}")
+    for a,b,dt in gaps[:30]:
+        print(f"GAP {a} -> {b} duration={dt}")
     print(f"Spread median={m1.spread.median():.4f} USD p90={m1.spread.quantile(.9):.4f} USD")
     for tf,rule in RULES.items():
         x=resample(m1,rule).reset_index().rename(columns={"ts":"time"})
