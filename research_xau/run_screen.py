@@ -276,6 +276,10 @@ def ict_exit(open_trades,row,now):
 def run_ict():
     m5=load("m5"); m15=load("m15"); h4=load("h4")
     m15["atr"]=atr_sma(m15,14)
+    # Precompute causal availability times once. searchsorted turns the old
+    # full-DataFrame filter on every M5 bar into O(log N) lookup.
+    m15_available=pd.DatetimeIndex(m15["time"]).asi8 + 15*60*1_000_000_000
+    h4_available=pd.DatetimeIndex(h4["time"]).asi8 + 4*60*60*1_000_000_000
     open_tr=[]; done=[]; trackers={"BUY":(None,None),"SELL":(None,None)}
     for i in range(60,len(m5)):
         row=m5.iloc[i]
@@ -283,8 +287,11 @@ def run_ict():
         now_wib=decision.tz_convert("Asia/Jakarta")
         done.extend(ict_exit(open_tr,row,now_wib.to_pydatetime()))
         # CAUSAL HTF FIX: only bars whose full duration has closed by decision time.
-        x15=m15[m15.time+pd.Timedelta(minutes=15)<=decision].tail(60).copy()
-        x4=h4[h4.time+pd.Timedelta(hours=4)<=decision].tail(60).copy()
+        d_ns=int(decision.value)
+        j15=int(np.searchsorted(m15_available,d_ns,side="right"))
+        j4=int(np.searchsorted(h4_available,d_ns,side="right"))
+        x15=m15.iloc[max(0,j15-60):j15].copy()
+        x4=h4.iloc[max(0,j4-60):j4].copy()
         if len(x15)<15 or len(x4)<51: continue
         bias=h4_bias(x4); z=pd_zone(x4); st=structure(x4)
         sig=fvg_retest(x15,bias)
