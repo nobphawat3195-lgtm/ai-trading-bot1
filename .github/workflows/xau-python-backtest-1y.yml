@@ -20,31 +20,37 @@ jobs:
         with:
           python-version: "3.11"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "numpy>=1.24" "pandas>=2.0"
-          npm install dukascopy-node@1.46.4
+          pip install "numpy>=1.24" "pandas>=2.0" pyarrow
 
-      - name: Download XAUUSD M1 BID and ASK from Dukascopy
+      - name: Fetch archived Dukascopy XAUUSD tick months
         run: |
-          mkdir -p data/raw
-          npx dukascopy-node -i xauusd -from 2025-06-01 -to 2026-09-01 -t m1 -p bid -v -f csv -dir data/raw -fn xauusd_m1_bid.csv -r 3 -re
-          npx dukascopy-node -i xauusd -from 2025-06-01 -to 2026-09-01 -t m1 -p ask -v -f csv -dir data/raw -fn xauusd_m1_ask.csv -r 3 -re
-          echo "Downloaded files:"
-          find data/raw -maxdepth 1 -type f -printf "%f %s bytes\n"
+          rm -rf data/ticks_repo
+          git clone --depth 1 --filter=blob:none --no-checkout https://github.com/simom1/XAUUSD-history.git data/ticks_repo
+          cd data/ticks_repo
+          git sparse-checkout init --no-cone
+          git sparse-checkout set \
+            2025/xauusd_2025_07.parquet \
+            2025/xauusd_2025_08.parquet \
+            2025/xauusd_2025_09.parquet \
+            2025/xauusd_2025_10.parquet \
+            2025/xauusd_2025_11.parquet \
+            2025/xauusd_2025_12.parquet \
+            2026/xauusd_2026_01.parquet \
+            2026/xauusd_2026_02.parquet \
+            2026/xauusd_2026_03.parquet \
+            2026/xauusd_2026_04.parquet \
+            2026/xauusd_2026_05.parquet \
+            2026/xauusd_2026_06.parquet \
+            2026/xauusd_2026_07.parquet \
+            2026/xauusd_2026_08.parquet
+          git checkout main
+          find 2025 2026 -type f -name '*.parquet' -printf "%p %s bytes\n"
 
-      - name: Build common bars and spread
-        run: |
-          BID=$(find data/raw -maxdepth 1 -type f -iname '*bid*' | head -1)
-          ASK=$(find data/raw -maxdepth 1 -type f -iname '*ask*' | head -1)
-          test -n "$BID"
-          test -n "$ASK"
-          python research_xau/prepare_data.py --bid "$BID" --ask "$ASK"
+      - name: Build common M1/M5/M15/H1/H4/D1 bars
+        run: python research_xau/prepare_ticks.py
 
       - name: Run UT, Volume Profile and ICT screens
         run: python research_xau/run_screen.py
