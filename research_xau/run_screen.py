@@ -281,11 +281,15 @@ def run_ict():
     m15_available=pd.DatetimeIndex(m15["time"]).asi8 + 15*60*1_000_000_000
     h4_available=pd.DatetimeIndex(h4["time"]).asi8 + 4*60*60*1_000_000_000
     open_tr=[]; done=[]; trackers={"BUY":(None,None),"SELL":(None,None)}
+    cache_key=None; cache_val=None
     for i in range(60,len(m5)):
         row=m5.iloc[i]
         decision=row.time+pd.Timedelta(minutes=5)  # current M5 is now CLOSED
         now_wib=decision.tz_convert("Asia/Jakarta")
-        done.extend(ict_exit(open_tr,row,now_wib.to_pydatetime()))
+        just_closed=ict_exit(open_tr,row,now_wib.to_pydatetime())
+        if just_closed:
+            done.extend(just_closed)
+            open_tr=[t for t in open_tr if not t.get("done")]
         # Original entry profile never admits Asia/dead hours, and London only admits
         # Mon-Wed. Gate those before expensive HTF/FVG calculations; signal semantics
         # are unchanged because these bars could never execute a trade.
@@ -296,11 +300,19 @@ def run_ict():
         d_ns=int(decision.value)
         j15=int(np.searchsorted(m15_available,d_ns,side="right"))
         j4=int(np.searchsorted(h4_available,d_ns,side="right"))
-        x15=m15.iloc[max(0,j15-60):j15].copy()
-        x4=h4.iloc[max(0,j4-60):j4].copy()
-        if len(x15)<15 or len(x4)<51: continue
-        bias=h4_bias(x4); z=pd_zone(x4); st=structure(x4)
-        sig=fvg_retest(x15,bias)
+        key=(j15,j4)
+        if key!=cache_key:
+            x15=m15.iloc[max(0,j15-60):j15].copy()
+            x4=h4.iloc[max(0,j4-60):j4].copy()
+            if len(x15)<15 or len(x4)<51:
+                cache_key=key; cache_val=None
+            else:
+                bias0=h4_bias(x4); z0=pd_zone(x4); st0=structure(x4)
+                sig0=fvg_retest(x15,bias0)
+                atr0=float(x15.atr.iloc[-1]) if len(x15) else float("nan")
+                cache_key=key; cache_val=(bias0,z0,st0,sig0,atr0)
+        if cache_val is None: continue
+        bias,z,st,sig,atr=cache_val
         if not sig: continue
         side,extreme=sig
         kz=ses in ("ASIA","LONDON","NY")
@@ -317,7 +329,8 @@ def run_ict():
         if side=="SELL" and z!="PREMIUM": continue
         if side=="BUY" and st=="BEARISH": continue
         if side=="SELL" and st=="BULLISH": continue
-        atr=float(x15.atr.iloc[-1])
+        # Config states MAX_OPEN_POSITIONS = 2.
+        if len(open_tr)>=2: continue
         if not np.isfinite(atr) or atr<=0: continue
         sp=float(row.spread)
         entry=float(row.close)+(sp/2 if side=="BUY" else -sp/2)
