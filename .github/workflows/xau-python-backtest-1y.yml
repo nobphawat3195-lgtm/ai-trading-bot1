@@ -35,12 +35,18 @@ jobs:
             2025/xauusd_2025_07.parquet \
             2025/xauusd_2025_08.parquet \
             2025/xauusd_2025_09.parquet \
-            2025/xauusd_2025_10.parquet \
+            2025/xauusd_2025_10_early.parquet \
+            2025/xauusd_2025_10_mid.parquet \
+            2025/xauusd_2025_10_late.parquet \
             2025/xauusd_2025_11.parquet \
             2025/xauusd_2025_12.parquet \
-            2026/xauusd_2026_01.parquet \
+            2026/xauusd_2026_01_early.parquet \
+            2026/xauusd_2026_01_mid.parquet \
+            2026/xauusd_2026_01_late.parquet \
             2026/xauusd_2026_02.parquet \
-            2026/xauusd_2026_03.parquet \
+            2026/xauusd_2026_03_early.parquet \
+            2026/xauusd_2026_03_mid.parquet \
+            2026/xauusd_2026_03_late.parquet \
             2026/xauusd_2026_04.parquet \
             2026/xauusd_2026_05.parquet \
             2026/xauusd_2026_06.parquet \
