@@ -1,0 +1,81 @@
+name: XAU Python Backtest 1Y
+
+on:
+  push:
+    branches:
+      - chatgpt/python-xau-backtest-1y
+    paths:
+      - "research_xau/**"
+      - ".github/workflows/xau-python-backtest-1y.yml"
+  workflow_dispatch:
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "numpy>=1.24" "pandas>=2.0"
+          npm install dukascopy-node@1.50.0
+
+      - name: Download XAUUSD M1 BID and ASK from Dukascopy
+        run: |
+          mkdir -p data/raw
+          npx dukascopy-node -i xauusd -from 2025-06-01 -to 2026-09-01 -t m1 -p bid -v -f csv -dir data/raw -fn xauusd_m1_bid.csv -r 3 -re
+          npx dukascopy-node -i xauusd -from 2025-06-01 -to 2026-09-01 -t m1 -p ask -v -f csv -dir data/raw -fn xauusd_m1_ask.csv -r 3 -re
+          echo "Downloaded files:"
+          find data/raw -maxdepth 1 -type f -printf "%f %s bytes\n"
+
+      - name: Build common bars and spread
+        run: |
+          BID=$(find data/raw -maxdepth 1 -type f -iname '*bid*' | head -1)
+          ASK=$(find data/raw -maxdepth 1 -type f -iname '*ask*' | head -1)
+          test -n "$BID"
+          test -n "$ASK"
+          python research_xau/prepare_data.py --bid "$BID" --ask "$ASK"
+
+      - name: Run UT, Volume Profile and ICT screens
+        run: python research_xau/run_screen.py
+
+      - name: Clone and prepare Quant research engine
+        run: |
+          mkdir -p external
+          git clone --depth 1 https://github.com/Aarayanc49/xauusd-quant-backtest.git external/xauusd-quant-backtest
+          pip install -r external/xauusd-quant-backtest/requirements.txt
+          cd external/xauusd-quant-backtest
+          python -m research.fetch csv ../../data/quant_csv
+
+      - name: Run Quant SWING screen
+        run: python research_xau/run_quant.py
+
+      - name: Print all screening results
+        if: always()
+        run: |
+          echo "===== DETERMINISTIC ====="
+          cat results/deterministic_summary.json 2>/dev/null || true
+          echo ""
+          echo "===== QUANT ====="
+          cat results/quant_summary.json 2>/dev/null || true
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xau-python-backtest-1y-results
+          path: |
+            results/
+            data/processed/xauusd_m5.csv
+            data/processed/xauusd_m15.csv
+          if-no-files-found: warn
