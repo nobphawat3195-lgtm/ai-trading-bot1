@@ -32,3 +32,9 @@ Verify MT5, MetaEditor, Strategy Tester paths, broker symbol mapping, and report
 
 ## Resource note
 One EA at a time. One heavy optimization at a time. 1–2 tester agents by default. Do not start heavy work if RAM > 80%.
+
+## Infrastructure log
+- 2026-09-26: Added `bridge/` (FastAPI control plane + dashboard, 8 tests passing) and
+  `MQL5/Experts/XAU_ControlBridge.mq5` v0.10 (risk guard + HMAC-signed sync). No trading logic:
+  `StrategySignal()` is a stub. EA NOT yet compiled in MetaEditor — next: compile, send log, demo run.
+- GitHub scan results: `docs/GITHUB_SCAN_2026-09.md`; hypotheses H-GH1..3 queued in research_queue.csv.

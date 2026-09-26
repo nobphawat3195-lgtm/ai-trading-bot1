@@ -3,3 +3,5 @@ charts/
 *.html
 *.csv
 __pycache__/
+!bridge/static/*.html
+*.db
