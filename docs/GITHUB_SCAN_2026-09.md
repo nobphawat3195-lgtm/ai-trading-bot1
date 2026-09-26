@@ -23,3 +23,16 @@ Status legend: ADOPT (tooling) / HYPOTHESIS (queued) / REJECT.
 | yulz008/GOLD_ORB, kalokaman/MT5-GOLD-STRATEGIES | H1 opening-range breakout, fixed 400/1200 pt | Screenshots only, no metrics text / no license (kalokaman) | Low priority; overlaps existing straddle work |
 | BlamzKunG/XAUUSD-Grid-EA, coler07/mql5-format | Grid/martingale/hedge | — | REJECT per FAILED_IDEAS (grid as edge substitute) |
 | BAKOME-Hub/BAKOMEGoldScalper | ICT + "AI" scalper | Marketing-heavy | Not reviewed further |
+
+## C. LLM + MT5 + dashboard systems (Aegis-Orbit-style) — scan 2
+
+| Repo | Architecture | Notes | Verdict |
+|---|---|---|---|
+| rizukid14/tradingpartnerXAU (no license) | Python MetaTrader5 pkg; 3 LLMs (OpenAI/Gemini/DeepSeek-or-Claude) weighted-confidence vote (>=2 agree); Dash log dashboard | Hard gates: daily loss, spread cap, position cap, SL >= 2x spread; time-scheduled model calls to cut cost; no P/L published; README exposes live login | Reference for consensus + cost scheduling; no license → ideas only |
+| vincentleong123/goldbrain (no license) | MQL5 bridge exports JSON → Node server → LLM "Reasoner" (advisory) → canvas dashboard; replay "Theatre" | EA trades only Reasoner-approved; SIMULATE default; discloses poor win rate honestly | Reference for replay/narration UX |
+| mobjoy0/mt5-bridge (MIT) | MQL5 EA ↔ Node/Express REST+WS ↔ React | No auth; localhost only | Candidate bridge skeleton (add auth) |
+| zhangyizhi18/mt5-2pa-agent (AGPL-3.0) | PABridge.mq5 polls Rust service ~1s; 2-stage LLM (diagnose → decide) | Closest to Aegis architecture; AGPL → do not copy into closed product | Architecture reference only |
+| SteveParadox/trading-bot | FastAPI + SQLite journal + React; MT5_DEMO_ONLY guard refuses real accounts; persisted risk halts; news blackout | Deterministic MA/ADX strategy, not LLM | Best safety-pattern reference |
+| basantzp/ai-gold-trading-bot (MIT) | MT5 → LLM JSON (BUY/SELL/HOLD, SL/TP) → Streamlit | No results, 0 stars | Low priority |
+
+Lessons: (1) every serious project keeps hard risk gates outside the LLM; (2) none publishes verifiable live performance; (3) EA-polling bridge is the standard pattern because MQL5 cannot listen on ports.
