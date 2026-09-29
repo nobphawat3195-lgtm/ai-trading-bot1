@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XAU Control Bridge</title>
+<style>
+  :root { --bg:#0d0f12; --card:#161a20; --line:#262c35; --text:#e6e8eb; --muted:#8a93a0;
+          --gold:#d9b25f; --up:#3fb950; --down:#f85149; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 system-ui, "Noto Sans Thai", sans-serif; }
+  main { max-width:960px; margin:0 auto; padding:16px; }
+  h1 { font-size:18px; color:var(--gold); margin:0 0 12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+  .k { color:var(--muted); font-size:12px; } .v { font-size:20px; font-variant-numeric:tabular-nums; }
+  .up { color:var(--up); } .down { color:var(--down); }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; background:var(--muted); }
+  .dot.on { background:var(--up); }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  th, td { text-align:right; padding:6px 4px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  .scroll { overflow-x:auto; }
+  button, input, select { font:inherit; color:var(--text); background:#0f1216; border:1px solid var(--line);
+                          border-radius:8px; padding:6px 10px; }
+  button { cursor:pointer; } button.danger { border-color:var(--down); color:var(--down); }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  label { display:flex; flex-direction:column; gap:2px; font-size:12px; color:var(--muted); }
+  label input { width:120px; }
+  #msg { color:var(--muted); font-size:12px; min-height:18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>XAU Control Bridge</h1>
+
+  <div class="card row">
+    <input id="token" type="password" placeholder="Admin token" autocomplete="off">
+    <select id="account"></select>
+    <button id="connect">เชื่อมต่อ</button>
+    <span id="status"><span class="dot"></span>ยังไม่เชื่อมต่อ</span>
+  </div>
+
+  <div class="card grid">
+    <div><div class="k">Balance</div><div class="v" id="balance">–</div></div>
+    <div><div class="k">Equity</div><div class="v" id="equity">–</div></div>
+    <div><div class="k">P/L วันนี้</div><div class="v" id="daypnl">–</div></div>
+    <div><div class="k">Spread (pts)</div><div class="v" id="spread">–</div></div>
+    <div><div class="k">Risk guard</div><div class="v" id="risk">–</div></div>
+    <div><div class="k">Config ที่ EA ใช้</div><div class="v" id="cfgver">–</div></div>
+  </div>
+
+  <div class="card grid" id="stats"></div>
+
+  <div class="card">
+    <div class="row">
+      <button data-cmd="PAUSE">Pause</button>
+      <button data-cmd="RESUME">Resume</button>
+      <button data-cmd="CLOSE_ALL" class="danger">Close all</button>
+    </div>
+    <div id="msg"></div>
+  </div>
+
+  <div class="card">
+    <div class="k" style="margin-bottom:8px">Config (EA จะ clamp อีกชั้นด้วย hard limit ของตัวเอง)</div>
+    <div class="row" id="cfgform"></div>
+    <div class="row" style="margin-top:8px"><button id="savecfg">บันทึก config เวอร์ชันใหม่</button></div>
+  </div>
+
+  <div class="card scroll">
+    <div class="k">ไม้ที่เปิดอยู่</div>
+    <table><thead><tr><th>Ticket</th><th>ฝั่ง</th><th>Lot</th><th>เปิด</th><th>SL</th><th>TP</th><th>P/L</th></tr></thead>
+    <tbody id="positions"></tbody></table>
+  </div>
+
+  <div class="card scroll">
+    <div class="k">Deals ล่าสุด</div>
+    <table><thead><tr><th>เวลา</th><th>ฝั่ง</th><th>Entry</th><th>Lot</th><th>ราคา</th><th>P/L สุทธิ</th><th>Cfg</th></tr></thead>
+    <tbody id="deals"></tbody></table>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, v); } catch {} },
+};
+let token = store.get("bridge_token") || "";
+let account = "";
+let timer = null;
+$("token").value = token;
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { "Authorization": "Bearer " + token,
+                                                    "Content-Type": "application/json" } });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.status);
+  return r.json();
+}
+const money = (x) => x == null ? "–" : (x < 0 ? "-$" : "$") + Math.abs(x).toFixed(2);
+const cls = (x) => x > 0 ? "up" : x < 0 ? "down" : "";
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+async function loadAccounts() {
+  const list = await api("/v1/accounts");
+  $("account").innerHTML = list.map((a) => `<option>${esc(a.account)}</option>`).join("");
+  account = list[0]?.account || "";
+}
+
+async function refresh() {
+  if (!account) return;
+  try {
+    const [st, stats, deals] = await Promise.all([
+      api(`/v1/accounts/${account}/state`).catch(() => null),
+      api(`/v1/accounts/${account}/stats`),
+      api(`/v1/accounts/${account}/deals?limit=50`),
+    ]);
+    if (st) {
+      const s = st.state, risk = s.risk || {};
+      $("status").innerHTML = `<span class="dot ${st.online ? "on" : ""}"></span>` +
+        (st.online ? "EA ออนไลน์" : `ออฟไลน์ (${st.age_sec}s)`);
+      $("balance").textContent = money(s.balance);
+      $("equity").textContent = money(s.equity);
+      $("daypnl").innerHTML = `<span class="${cls(risk.day_pnl)}">${money(risk.day_pnl)}</span>`;
+      $("spread").textContent = s.spread_pts ?? "–";
+      $("risk").innerHTML = risk.halted ? `<span class="down">หยุด: ${esc(risk.reason)}</span>`
+                                        : (risk.paused ? "Paused" : `<span class="up">ปกติ</span>`);
+      $("cfgver").textContent = "v" + (s.config_version ?? 0);
+      $("positions").innerHTML = (s.positions || []).map((p) =>
+        `<tr><td>${p.ticket}</td><td>${esc(p.type)}</td><td>${p.volume}</td><td>${p.price_open}</td>` +
+        `<td>${p.sl}</td><td>${p.tp}</td><td class="${cls(p.profit)}">${money(p.profit)}</td></tr>`).join("");
+    }
+    const tiles = [["ไม้ที่ปิดแล้ว", stats.trades], ["Net", money(stats.net)], ["PF", stats.profit_factor ?? "–"],
+                   ["Win rate", stats.win_rate_pct == null ? "–" : stats.win_rate_pct + "%"],
+                   ["Avg win / loss", `${money(stats.avg_win)} / ${money(stats.avg_loss)}`],
+                   ["Expectancy/ไม้", money(stats.expectancy)]];
+    $("stats").innerHTML = tiles.map(([k, v]) => `<div><div class="k">${k}</div><div class="v">${v}</div></div>`).join("") +
+      (stats.trades < 200 ? `<div><div class="k">หมายเหตุ</div><div class="k">ยังไม่ถึง 200 ไม้ สถิติยังเชื่อไม่ได้</div></div>` : "");
+    $("deals").innerHTML = deals.map((d) => {
+      const net = d.profit + d.commission + d.swap;
+      return `<tr><td>${new Date(d.time * 1000).toLocaleString()}</td><td>${esc(d.type)}</td><td>${esc(d.entry)}</td>` +
+             `<td>${d.volume}</td><td>${d.price}</td><td class="${cls(net)}">${d.entry === "in" ? "" : money(net)}</td>` +
+             `<td>v${d.config_version}</td></tr>`;
+    }).join("");
+  } catch (e) { $("msg").textContent = "โหลดไม่สำเร็จ: " + e.message; }
+}
+
+async function loadConfig() {
+  const c = await api(`/v1/accounts/${account}/config`);
+  $("cfgform").innerHTML = Object.entries(c.bounds).map(([k, [lo, hi]]) =>
+    `<label>${k}<input data-key="${k}" type="number" step="any" min="${lo}" max="${hi}" value="${c.values[k]}"></label>`).join("");
+}
+
+$("connect").onclick = async () => {
+  token = $("token").value.trim(); store.set("bridge_token", token);
+  try {
+    await loadAccounts(); await loadConfig(); await refresh();
+    clearInterval(timer); timer = setInterval(refresh, 5000);
+    $("msg").textContent = "";
+  } catch (e) { $("msg").textContent = "เชื่อมต่อไม่สำเร็จ: " + e.message; }
+};
+$("account").onchange = async (e) => { account = e.target.value; await loadConfig(); await refresh(); };
+
+document.querySelectorAll("[data-cmd]").forEach((b) => b.onclick = async () => {
+  const type = b.dataset.cmd;
+  if (type === "CLOSE_ALL" && !confirm("ปิดทุกไม้ของ EA นี้ทันที และ Pause ไว้จนกว่าจะกด Resume?")) return;
+  try {
+    const r = await api(`/v1/accounts/${account}/commands`, { method: "POST", body: JSON.stringify({ type }) });
+    $("msg").textContent = `ส่ง ${type} แล้ว (id ${r.id}) รอ EA ยืนยัน`;
+  } catch (e) { $("msg").textContent = "ส่งคำสั่งไม่สำเร็จ: " + e.message; }
+});
+
+$("savecfg").onclick = async () => {
+  const values = {};
+  document.querySelectorAll("#cfgform input").forEach((i) => values[i.dataset.key] = Number(i.value));
+  try {
+    const r = await api(`/v1/accounts/${account}/config`, { method: "PUT", body: JSON.stringify(values) });
+    $("msg").textContent = `บันทึก config v${r.version} แล้ว EA จะรับในรอบ sync ถัดไป`;
+  } catch (e) { $("msg").textContent = "บันทึกไม่สำเร็จ: " + e.message; }
+};
+</script>
+</body>
+</html>
