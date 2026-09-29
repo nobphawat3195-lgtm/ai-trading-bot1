@@ -14,11 +14,14 @@ MQL5/
     ExportSessionTicks.mq5    ส่งออก bid/ask 1 วินาที เฉพาะหน้าต่างที่ EA เทรด -> CSV
   Experts/
     XAU_StraddleReverse_v4_40.mq5   ซอร์ส v4.41 (เก็บไว้อ้างอิง)
+    XAU_ControlBridge.mq5           risk guard + ส่งข้อมูลขึ้นเว็บ (ดู bridge/README.md)
+    XAU_LadderGrid.mq5              ตะแกรงหลายชั้น H-GRID1 (ยังไม่ compile, ดู docs/LADDER_GRID_HYPOTHESIS.md)
   Presets/                    ไฟล์ .set ชุด v4.40
 workflow/                     สคริปต์ compile / backtest / optimize ผ่าน command line
 tools/
   ea_backtest_engine.py       ตัวจำลอง EA บนข้อมูลราคาจริง + กวาดหน้าต่างเวลาทั้งวัน
   mt5_report_charts.py        รายงาน Strategy Tester (.htm) หรือ deals.csv -> กราฟ 4 ใบ
+  ladder_grid_sim.py          ตัวจำลองอ้างอิงของ XAU_LadderGrid (+ test_ladder_grid_sim.py)
   fonts/                      Noto Sans Thai (ให้ป้ายภาษาไทยบนกราฟไม่เพี้ยน)
 ```
 
